@@ -1,63 +1,217 @@
-# NgLazyCache
+# `@ravimallya/ng-lazy-cache`
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.0.
+A lightweight Angular route resolver for caching asynchronous data with a configurable time-to-live (TTL). This library optimizes Angular applications by reducing redundant API calls and enhancing performance for route data loading.
 
-## Code scaffolding
+## Overview
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+`@ravimallya/ng-lazy-cache` provides a `LazyCache` resolver that caches the results of asynchronous data fetches (e.g., HTTP requests) using a unique key. It supports both route-level and global TTL configurations, offering flexible caching strategies. Additionally, a `clearCache` function is available for testing purposes to reset the in-memory cache.
 
-```bash
-ng generate component component-name
-```
+- **Route-Level TTL**: Set a specific TTL for individual routes.
+- **Global TTL**: Define a default TTL at the application level, overridden by route-specific values.
+- **In-Memory Caching**: Stores data with automatic expiration.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Installation
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the library, run:
+Install the package via npm:
 
 ```bash
-ng build ng-lazy-cache
+npm install @ravimallya/ng-lazy-cache
 ```
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
+Ensure your project has the following peer dependencies:
 
-### Publishing the Library
+- `@angular/core` (^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0)
+- `@angular/common` (^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0)
+- `@angular/router` (^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0 || ^20.0.0)
+- `rxjs` (~7.8.0 || ^8.0.0)
 
-Once the project is built, you can publish your library by following these steps:
+## Usage
 
-1. Navigate to the `dist` directory:
-   ```bash
-   cd dist/ng-lazy-cache
-   ```
+### Basic Example
 
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
+Configure the resolver in your route definition to cache data.
 
-## Running unit tests
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './home/home.component';
+import { LazyCache } from '@ravimallya/ng-lazy-cache';
+import { of } from 'rxjs';
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+const fetchData = () => {
+  console.log('Fetching data...');
+  return of('Loaded data from server');
+};
+
+export const routes: Routes = [
+  {
+    path: 'cached-route',
+    component: HomeComponent,
+    resolve: {
+      data: LazyCache(fetchData, { key: 'demo-key', ttl: 5000 }) // 5-second TTL
+    }
+  },
+  { path: '', redirectTo: '/cached-route', pathMatch: 'full' }
+];
+```
+
+In your component, access the resolved data:
+
+```typescript
+import { Component } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  template: `<p>Resolved Data: {{ data }}</p>`
+})
+export class HomeComponent {
+  data: string;
+
+  constructor(route: ActivatedRoute) {
+    this.data = route.snapshot.data['data'];
+  }
+}
+```
+
+### Global TTL Configuration
+
+Set a default TTL in `app.config.ts`, overridden by route-specific TTLs.
+
+```typescript
+import { ApplicationConfig } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+import { GLOBAL_TTL_TOKEN } from '@ravimallya/ng-lazy-cache';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideRouter(routes),
+    { provide: GLOBAL_TTL_TOKEN, useValue: 30000 } // Global TTL of 30 seconds
+  ]
+};
+```
+
+### Route-Level TTL Override
+
+Override the global TTL for specific routes.
+
+```typescript
+export const routes: Routes = [
+  {
+    path: 'cached-route',
+    component: HomeComponent,
+    resolve: {
+      data: LazyCache(fetchData, { key: 'demo-key', ttl: 5000 }) // 5-second TTL overrides global
+    }
+  }
+];
+```
+
+### Real-World Example with HTTP
+
+Cache API responses using `HttpClient`.
+
+```typescript
+import { Routes } from '@angular/router';
+import { ProductComponent } from './product/product.component';
+import { LazyCache } from '@ravimallya/ng-lazy-cache';
+import { HttpClient } from '@angular/common/http';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { inject } from '@angular/core';
+
+const fetchProduct = (http: HttpClient, id: string) => () =>
+  http.get(`https://jsonplaceholder.typicode.com/posts/${id}`).pipe(
+    map(response => response.title),
+    catchError(() => of('Fallback Data'))
+  );
+
+export const routes: Routes = [
+  {
+    path: 'product/:id',
+    component: ProductComponent,
+    resolve: {
+      product: LazyCache((route) => fetchProduct(inject(HttpClient), route.params['id']), {
+        key: (route) => `product-${route.params['id']}`, // Dynamic key
+        ttl: 60000 // 1-minute TTL
+      })
+    }
+  }
+];
+```
+
+In `ProductComponent`:
+
+```typescript
+import { Component } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-product',
+  standalone: true,
+  template: `<p>Product Title: {{ product }}</p>`
+})
+export class ProductComponent {
+  product: string;
+
+  constructor(route: ActivatedRoute) {
+    this.product = route.snapshot.data['product'];
+  }
+}
+```
+
+### API Documentation
+
+- **`LazyCache<T>(fetchFn: () => Observable<T>, options: LazyCacheOptions<T> = { key: 'default' }): ResolveFn<T>`**
+  - **Parameters**:
+    - `fetchFn`: A function returning an `Observable` that fetches the data.
+    - `options`: An object with:
+      - `key`: A string or function `(route: any) => string` to generate a unique cache key.
+      - `ttl?`: Optional number (in milliseconds) for route-specific TTL (overrides global TTL).
+  - **Returns**: A `ResolveFn` compatible with Angular’s router.
+
+- **`GLOBAL_TTL_TOKEN`**
+  - An injection token to provide a global TTL (default: 30 seconds) via `app.config.ts`.
+
+- **`clearCache(): void`**
+  - A utility function to clear the in-memory cache, intended for testing purposes.
+
+## Development
+
+### Building the Library
 
 ```bash
-ng test
+ng build ng-lazy-cache --configuration production
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+### Running Tests
 
 ```bash
-ng e2e
+npx ng test ng-lazy-cache --browsers=ChromeHeadless
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### Demo Application
 
-## Additional Resources
+A demo app is included in the `projects/demo-app` directory. Serve it to test the library:
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+ng serve demo-app
+```
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/new-feature`).
+3. Commit your changes (`git commit -m 'Add new feature'`).
+4. Push to the branch (`git push origin feature/new-feature`).
+5. Open a pull request.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- Built with ❤️ using Angular and RxJS.
+- Inspired by the need for efficient route data caching in large-scale applications.
