@@ -1,28 +1,45 @@
 import { ResolveFn } from '@angular/router';
+import { inject, InjectionToken } from '@angular/core'; // Import inject and InjectionToken
 import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 
-interface LazyCacheOptions<T> {
-  key?: string;
-  ttl?: number; // ms, default session (until reload)
-  invalidateOn?: string[]; // Future: event names for invalidation
+// Injection token for global TTL configuration
+export const GLOBAL_TTL_TOKEN = new InjectionToken<number>('Global TTL', {
+  providedIn: 'root',
+  factory: () => 30000 // Default to 30 seconds
+});
+
+export interface LazyCacheOptions<T> {
+  key: string | ((route: any) => string); // Key can be static or dynamic
+  ttl?: number; // Optional TTL per resolver instance
 }
 
 const cache = new Map<string, { data: any; expiry: number }>();
 
-export function LazyCache<T>(fetchFn: () => Observable<T>, options: LazyCacheOptions<T> = {}): ResolveFn<T> {
-  const { key = 'default', ttl = 0 } = options; // 0 = session-only
+export function LazyCache<T>(
+  fetchFn: () => Observable<T>,
+  options: LazyCacheOptions<T> = { key: 'default' }
+): ResolveFn<T> {
+  // Create a factory to defer injection until resolver execution
+  return (route, state) => {
+    const getGlobalTtl = () => inject(GLOBAL_TTL_TOKEN); // Deferred injection
+    const ttl = options.ttl ?? getGlobalTtl();
+    const key = typeof options.key === 'function' ? options.key(route) : options.key;
 
-  return (route, state): Observable<T> => {
-    const now = Date.now();
     const cached = cache.get(key);
-    if (cached && (ttl === 0 || now < cached.expiry)) {
-      return of(cached.data as T); // Explicit cast to T
+    const now = Date.now();
+
+    if (cached && now < cached.expiry) {
+      return of(cached.data);
     }
 
     return fetchFn().pipe(
-      tap(data => {
-        cache.set(key, { data, expiry: ttl > 0 ? now + ttl : now });
+      tap((data: T) => {
+        cache.set(key, { data, expiry: now + ttl });
+      }),
+      catchError(error => {
+        console.error(`Error fetching data for key ${key}:`, error);
+        return of(null as T); // Type-safe fallback
       })
     );
   };

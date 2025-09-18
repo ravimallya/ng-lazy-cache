@@ -13,7 +13,7 @@ export const routes: Routes = [
     path: 'cached-route',
     component: HomeComponent,
     resolve: {
-      data: LazyCache(fetchData, { key: 'demo-key', ttl: 5000 })
+      data: LazyCache(fetchData, { key: 'demo-key', ttl: 5000 }) // 5-second TTL overrides global
     }
   },
   { path: '', redirectTo: '/cached-route', pathMatch: 'full' }
