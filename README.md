@@ -1,14 +1,14 @@
-# @ravimallya/ng-lazy-cache
+# `@ravimallya/ng-lazy-cache`
 
-A lightweight Angular route resolver for caching asynchronous data with a configurable time-to-live (TTL). This library helps optimize Angular applications by reducing redundant API calls and improving performance for route data loading.
+A lightweight Angular route resolver for caching asynchronous data with a configurable time-to-live (TTL). This library optimizes Angular applications by reducing redundant API calls and enhancing performance for route data loading.
 
 ## Overview
 
-`@ravimallya/ng-lazy-cache` provides a `LazyCache` resolver that caches the result of an asynchronous data fetch (e.g., HTTP requests) based on a unique key. It supports both route-level and global TTL configurations, allowing flexible caching strategies tailored to your application's needs.
+`@ravimallya/ng-lazy-cache` provides a `LazyCache` resolver that caches the results of asynchronous data fetches (e.g., HTTP requests) using a unique key. It supports both route-level and global TTL configurations, offering flexible caching strategies. Additionally, a `clearCache` function is available for testing purposes to reset the in-memory cache.
 
 - **Route-Level TTL**: Set a specific TTL for individual routes.
 - **Global TTL**: Define a default TTL at the application level, overridden by route-specific values.
-- **In-Memory Caching**: Stores data in memory with automatic expiration.
+- **In-Memory Caching**: Stores data with automatic expiration.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Ensure your project has the following peer dependencies:
 
 ### Basic Example
 
-Configure the resolver in your route definition to cache data for a specific route.
+Configure the resolver in your route definition to cache data.
 
 ```typescript
 import { Routes } from '@angular/router';
@@ -76,7 +76,7 @@ export class HomeComponent {
 
 ### Global TTL Configuration
 
-Set a default TTL at the application level in `app.config.ts`, which is used unless overridden by a route-specific TTL.
+Set a default TTL in `app.config.ts`, overridden by route-specific TTLs.
 
 ```typescript
 import { ApplicationConfig } from '@angular/core';
@@ -94,7 +94,7 @@ export const appConfig: ApplicationConfig = {
 
 ### Route-Level TTL Override
 
-Override the global TTL for specific routes by specifying a `ttl` in the resolver options.
+Override the global TTL for specific routes.
 
 ```typescript
 export const routes: Routes = [
@@ -110,7 +110,7 @@ export const routes: Routes = [
 
 ### Real-World Example with HTTP
 
-Use with `HttpClient` to cache API responses:
+Cache API responses using `HttpClient`.
 
 ```typescript
 import { Routes } from '@angular/router';
@@ -163,7 +163,7 @@ export class ProductComponent {
 
 ### API Documentation
 
-- **`LazyCache(fetchFn: () => Observable<any>, options: LazyCacheOptions): ResolveFn<any>`**
+- **`LazyCache<T>(fetchFn: () => Observable<T>, options: LazyCacheOptions<T> = { key: 'default' }): ResolveFn<T>`**
   - **Parameters**:
     - `fetchFn`: A function returning an `Observable` that fetches the data.
     - `options`: An object with:
@@ -173,6 +173,9 @@ export class ProductComponent {
 
 - **`GLOBAL_TTL_TOKEN`**
   - An injection token to provide a global TTL (default: 30 seconds) via `app.config.ts`.
+
+- **`clearCache(): void`**
+  - A utility function to clear the in-memory cache, intended for testing purposes.
 
 ## Development
 
