@@ -107,8 +107,8 @@ describe('LazyCache Resolver with GLOBAL_TTL_TOKEN', () => {
 
     const resolver = TestBed.runInInjectionContext(() =>
       LazyCache<string>(
-        () => (route.params.id === 42 ? fetchFn1() : fetchFn2()),
-        { key: (route) => `user-${route.params.id}` }
+        () => (route.params['id'] === 42 ? fetchFn1() : fetchFn2()),
+        { key: (route) => `user-${route.params['id']}` }
       )
     );
 

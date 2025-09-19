@@ -113,7 +113,7 @@ export const routes: Routes = [
 Cache API responses using `HttpClient`.
 
 ```typescript
-import { Routes } from '@angular/router';
+import { Routes, ActivatedRouteSnapshot } from '@angular/router';
 import { ProductComponent } from './product/product.component';
 import { LazyCache } from '@ravimallya/ng-lazy-cache';
 import { HttpClient } from '@angular/common/http';
@@ -132,8 +132,8 @@ export const routes: Routes = [
     path: 'product/:id',
     component: ProductComponent,
     resolve: {
-      product: LazyCache((route) => fetchProduct(inject(HttpClient), route.params['id']), {
-        key: (route) => `product-${route.params['id']}`, // Dynamic key
+      product: LazyCache((route: ActivatedRouteSnapshot) => fetchProduct(inject(HttpClient), route.params['id']), {
+        key: (route: ActivatedRouteSnapshot) => `product-${route.params['id']}`, // Dynamic key
         ttl: 60000 // 1-minute TTL
       })
     }
@@ -167,7 +167,7 @@ export class ProductComponent {
   - **Parameters**:
     - `fetchFn`: A function returning an `Observable` that fetches the data.
     - `options`: An object with:
-      - `key`: A string or function `(route: any) => string` to generate a unique cache key.
+      - `key`: A string or function `(route: ActivatedRouteSnapshot) => string` to generate a unique cache key.
       - `ttl?`: Optional number (in milliseconds) for route-specific TTL (overrides global TTL).
   - **Returns**: A `ResolveFn` compatible with Angular’s router.
 

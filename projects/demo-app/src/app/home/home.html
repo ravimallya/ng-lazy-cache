@@ -1,0 +1,12 @@
+
+<h1>Products (Cached List)</h1>
+<ul>
+    @for (item of data; track $index) {
+        <li>
+            <a routerLink="/product/{{item?.id}}"> {{ item?.title }}</a>
+        </li>
+      }
+</ul>
+<pre>
+    {{data | json}}
+</pre>

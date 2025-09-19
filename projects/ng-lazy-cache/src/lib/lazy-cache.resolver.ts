@@ -1,4 +1,4 @@
-import { ResolveFn } from '@angular/router';
+import { ActivatedRouteSnapshot, ResolveFn } from '@angular/router';
 import { inject, InjectionToken } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
@@ -10,7 +10,7 @@ export const GLOBAL_TTL_TOKEN = new InjectionToken<number>('Global TTL', {
 });
 
 export interface LazyCacheOptions<T> {
-  key: string | ((route: any) => string); // Key can be static or dynamic
+  key: string | ((route: ActivatedRouteSnapshot) => string); // Key can be static or dynamic
   ttl?: number; // Optional TTL per resolver instance
 }
 
@@ -24,7 +24,7 @@ export function clearCache(): void {
 }
 
 export function LazyCache<T>(
-  fetchFn: () => Observable<T>,
+  fetchFn: (route: ActivatedRouteSnapshot) => Observable<T>,
   options: LazyCacheOptions<T> = { key: 'default' }
 ): ResolveFn<T> {
   return (route, state) => {
@@ -39,7 +39,7 @@ export function LazyCache<T>(
       return of(cached.data);
     }
 
-    return fetchFn().pipe(
+    return fetchFn(route).pipe(
       tap((data: T) => {
         cache[key] = { data, expiry: now + ttl };
       }),
